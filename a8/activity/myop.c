@@ -1,0 +1,73 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+//2 pipes to send data to child, 1 pipe to read the result
+//index 0 and 1                  index 2
+#define MAXPIPES 3
+
+int fds[MAXPIPES][2]; 
+
+void child(char op) {
+	puts("Getting child ready for hard work...");
+	//rewire the pipes and invoke the program "add"
+	//rewire first pipe read to fd 0
+	dup2(fds[0][0], 0); //equivalent to close(0); dup(fds[0][0]); 
+	//rewire second pipe read to fd 3
+	dup2(fds[1][0], 3); //equivalent to close(3); dup(fds[1][0]);
+	//rewire third pipe write to fd 1
+	dup2(fds[2][1], 1); //equivalent to close(1); dup(fds[2][1]);
+
+	//close(fds[0][0]); close(fds[0][1]);
+	//close(fds[1][0]); close(fds[1][1]);
+	//close(fds[2][0]); close(fds[2][1]);
+	for(int i=0; i<MAXPIPES; i++) {
+		close(fds[i][0]); close(fds[i][1]);
+	}
+	
+	switch(op) {
+	case('+'):
+		execl("./add", "add", "-v", NULL);
+		break;
+	case('-'):
+		execl("./subtract", "subtract", "-v", NULL);
+		break;
+	case('*'):
+		execl("./multiply", "multiply", "-v", NULL);
+		break;
+	case('/'):
+		execl("./divide", "divide", "-v", NULL);
+		break;
+	default:
+		fprintf(stderr, "unknown op");
+		exit(1);
+	}
+	fprintf(stderr, "world is ending!\n"); //use stderr since stdout has been already redirected
+}
+
+
+int main(int argc, char *argv[]) {
+	//since fd 3 is used by add, ... etc, make it busy so that it won't be used by pipes
+	printf("Reserving fd %d for future use.\n", dup(0)); 
+	
+	char op = argv[1][0];
+	//pipe fd values (3,4), (5,6), (7,8) --> (4,5), (6,7), (8,9)
+	for(int i=0; i<MAXPIPES; i++)
+		pipe(fds[i]);
+	
+	if (!fork())
+		child(op);
+	
+	//read the data from the user and pump them to pipes
+	double x, y, z;
+	printf("Enter 2 numbers:\n");
+	while (scanf("%lf%lf", &x, &y) == 2) {
+		//write x and y to pipes --> child process
+		write(fds[0][1], &x, sizeof(double));	
+		write(fds[1][1], &y, sizeof(double));	
+		//read result from pipe <-- sent by child 
+		read(fds[2][0], &z, sizeof(double));
+		//printf("result: %lf\n", z);
+	}
+	//read the output and print...
+}

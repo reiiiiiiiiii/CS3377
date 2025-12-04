@@ -1,0 +1,18 @@
+num Threads = 1
+hash value = 3631830 
+-----------------------
+num Threads = 16
+hash value = 1148401353 
+-----------------------
+num Threads = 64
+hash value = 2178633008 
+-----------------------
+num Threads = 256
+hash value = 857563031 
+-----------------------
+num Threads = 1024
+hash value = 1553977906 
+-----------------------
+num Threads = 4096
+hash value = 1873427517 
+-----------------------
